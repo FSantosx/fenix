@@ -12,12 +12,14 @@ import android.os.Build
 import android.os.Environment
 import androidx.preference.PreferenceManager
 import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.IdlingRegistry
 import androidx.test.espresso.action.ViewActions.longClick
 import androidx.test.espresso.assertion.ViewAssertions
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiScrollable
 import androidx.test.uiautomator.UiSelector
 import androidx.test.uiautomator.Until
@@ -26,6 +28,8 @@ import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.allOf
 import org.mozilla.fenix.R
 import org.mozilla.fenix.helpers.ext.waitNotNull
+import org.mozilla.fenix.helpers.idlingresource.NetworkConnectedIdlingResource
+import org.mozilla.fenix.helpers.idlingresource.NetworkDisconnectedIdlingResource
 import org.mozilla.fenix.ui.robots.mDevice
 import java.io.File
 
@@ -114,6 +118,30 @@ object TestHelper {
 
             if (downloadedFile.exists()) {
                 downloadedFile.delete()
+            }
+        }
+    }
+
+    fun setNetworkConnection(enabled: Boolean) {
+        val mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+
+        when (enabled) {
+            true -> {
+                mDevice.executeShellCommand("svc data enable")
+                mDevice.executeShellCommand("svc wifi enable")
+
+                // Stopping any next steps until the network is fully connected
+                // Make sure to unregister the Idling resource after using this method
+                IdlingRegistry.getInstance().register(NetworkConnectedIdlingResource())
+            }
+
+            false -> {
+                mDevice.executeShellCommand("svc data disable")
+                mDevice.executeShellCommand("svc wifi disable")
+
+                // Stopping any next steps until the network is fully disconnected
+                // Make sure to unregister the Idling resource after using this method
+                IdlingRegistry.getInstance().register(NetworkDisconnectedIdlingResource())
             }
         }
     }
